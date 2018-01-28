@@ -116,14 +116,14 @@ class DecoderRNN(nn.Module):
         self.hidden_size = hidden_size
 
         self.embedding = nn.Embedding(output_size, hidden_size)
-        self.affine = nn.Linear(hidden_size * 2, hidden_size)
+        self.affine = nn.Linear(hidden_size, hidden_size)
         self.gru = nn.GRU(hidden_size, hidden_size)
         self.out = nn.Linear(hidden_size, output_size)
         self.softmax = nn.LogSoftmax(dim=1)
 
     def forward(self, input, hidden, embedding):
         output = self.embedding(input).view(1, 1, -1)
-        output = torch.cat((output[0], embedding[0]), 1) # embedding as an input to each layer
+        # output = torch.cat((output[0], embedding[0]), 1) # embedding as an input to each layer
         output = self.affine(output)
         for i in range(self.n_layers):
             # print(i, output)
@@ -174,6 +174,7 @@ def train(decoder_hidden, embedding, target_variable, decoder, decoder_optimizer
     if use_teacher_forcing:
         # Teacher forcing: Feed the target as the next input
         for di in range(target_length):
+            print("in decoder")
             decoder_output, decoder_hidden = decoder(
                 decoder_input, decoder_hidden, embedding)
             loss += criterion(decoder_output, target_variable[di])
@@ -182,6 +183,7 @@ def train(decoder_hidden, embedding, target_variable, decoder, decoder_optimizer
     else:
         # Without teacher forcing: use its own predictions as the next input
         for di in range(target_length):
+            print("in decoder")
             decoder_output, decoder_hidden = decoder(
                 decoder_input, decoder_hidden, embedding)
             topv, topi = decoder_output.data.topk(1)
@@ -225,7 +227,7 @@ def trainIters(decoder, n_epoch , print_every=1000, plot_every=100, learning_rat
     print_loss_total = 0  # Reset every print_every
     plot_loss_total = 0  # Reset every plot_every
     print_every_val = 1000
-
+    n_iters = len(trainWords)
     # encoder_optimizer = optim.SGD(encoder.parameters(), lr=learning_rate)
     # decoder_optimizer = optim.Adam(decoder.parameters(), lr=learning_rate)
     decoder_optimizer = optim.SGD(decoder.parameters(), lr=learning_rate)
@@ -236,6 +238,7 @@ def trainIters(decoder, n_epoch , print_every=1000, plot_every=100, learning_rat
         # order = np.random.permutation(len(trainWords))
 ## On train data
     for iter in range(1, len(trainWords) + 1):
+        print(iter)
         training_word = random.choice(trainWords)
         training_defIndex = trainDefIndex[trainWords.index(training_word)]
         # training_word = trainWords[order[iter-1]]
@@ -252,8 +255,9 @@ def trainIters(decoder, n_epoch , print_every=1000, plot_every=100, learning_rat
         embedding = embedding.cuda() if use_cuda else embedding
         hidden_variable = hidden_variable.cuda() if use_cuda else hidden_variable
         target_variable = target_variable.cuda() if use_cuda else target_variable
-
+        print("in train")
         loss = train(hidden_variable, embedding, target_variable, decoder, decoder_optimizer, criterion)
+        print("training done")
         print_loss_total += loss
         plot_loss_total += loss
 
